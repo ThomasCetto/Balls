@@ -3,6 +3,7 @@
   This means that each ball velocity is influenced only by his "brothers", when they crash into each other, and not by the movement of the father by inertia.
 */
 
+
 class Ball{
   // actual ball things
   PVector absolutePosition;
@@ -20,9 +21,9 @@ class Ball{
   PVector fatherPosition;
   Float fatherRadius;
   
+  static final float SPEED = 5;
   static final int N_GENERATIONS = 3;
   static final float CHILD_RADIUS_DIVISOR = 2.5; // > 2 please
-  
   
   
   
@@ -35,17 +36,15 @@ class Ball{
       this.fatherPosition = fatherPos;
       this.fatherRadius = fatherRadius;
     
-      float vx = random(0, 5);
-      float vy = 5 - vx;
-      
-      if(depth == 0){
-        vx = vy = 2;
-      }
+    
+      // x + y velocities = Ball.SPEED -> so it's always the same speed
+      float vx = (depth == 0) ? random(-0.75*Ball.SPEED, 0.75*Ball.SPEED) : random(0, Ball.SPEED);
+      float vy = Ball.SPEED - vx;
     
       velocity = new PVector(vx + radius/50, vy * radius/50);
       
       if(depth == 0){
-        positionInFather = new PVector(radius+100, radius+50);
+        positionInFather = new PVector(random(radius + 3, width - radius - 3), random(radius + 3, height - radius - 3));
         if(absolutePosition == null){
           absolutePosition = new PVector(0, 0);
         }
@@ -91,6 +90,8 @@ class Ball{
           velocity.set(reflection);
         }
     }
+    
+    
     positionInFather.add(velocity);
     
     
