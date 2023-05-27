@@ -4,7 +4,6 @@
 */
 
 class Ball{
-  
   // actual ball things
   PVector absolutePosition;
   PVector positionInFather;
@@ -21,7 +20,11 @@ class Ball{
   PVector fatherPosition;
   Float fatherRadius;
   
-  static final int N_GENERATIONS = 2;
+  static final int N_GENERATIONS = 3;
+  static final float CHILD_RADIUS_DIVISOR = 2.5; // > 2 please
+  
+  
+  
   
   
   Ball(float radius, int nChildren, int[] rgb, int depth, PVector fatherPos, Float fatherRadius){
@@ -29,28 +32,40 @@ class Ball{
       this.rgb = rgb;
       this.nChildren = nChildren;
       this.depth = depth;  
+      this.fatherPosition = fatherPos;
+      this.fatherRadius = fatherRadius;
     
-      velocity = new PVector(radius/25, radius/25);
+      float vx = random(0, 5);
+      float vy = 5 - vx;
+      
+      if(depth == 0){
+        vx = vy = 2;
+      }
+    
+      velocity = new PVector(vx + radius/50, vy * radius/50);
       
       if(depth == 0){
         positionInFather = new PVector(radius+100, radius+50);
+        if(absolutePosition == null){
+          absolutePosition = new PVector(0, 0);
+        }
+        absolutePosition.set(positionInFather);
       }else{
-        positionInFather = new PVector(random(radius, 2*fatherRadius - radius), random(radius, 2*fatherRadius - radius));
+        positionInFather = new PVector(random(2*radius, 2*fatherRadius - 2*radius), random(2*radius, 2*fatherRadius - 2*radius)); //inside his father
+        if(absolutePosition == null){
+          absolutePosition = new PVector(0, 0);
+        }
+        absolutePosition.set(PVector.add(positionInFather, fatherPosition));
       }
       
-      this.fatherPosition = fatherPos;
-      this.fatherRadius = fatherRadius;
-      
-      println(absolutePosition);
-      
       // add children
-      float childRadius = radius / 3;
+      float childRadius = radius / CHILD_RADIUS_DIVISOR;
       if(depth < Ball.N_GENERATIONS - 1){
         for(int i=0; i<nChildren; i++){
             children.add(
               new Ball(
                 childRadius,
-                nChildren - 1,
+                nChildren,
                 rgb,
                 depth + 1,
                 absolutePosition,
@@ -58,11 +73,6 @@ class Ball{
             ));
         }
       }
-  }
-  
-  void run(){
-    update();
-    display();
   }
   
   void update(){
@@ -77,26 +87,18 @@ class Ball{
        if (PVector.dist(positionInFather, new PVector(fatherRadius, fatherRadius)) >= fatherRadius - radius) { // if hits the rim or goes out
           PVector ballToFather = PVector.sub(positionInFather, new PVector(fatherRadius, fatherRadius));
           ballToFather.normalize();
-          
           PVector reflection = PVector.sub(velocity, PVector.mult(ballToFather, 2 * PVector.dot(velocity, ballToFather)));
-          
           velocity.set(reflection);
         }
-        
     }
-    println("ciao");
     positionInFather.add(velocity);
-    println("ciao2");
     
     
     if(depth == 0){
-         absolutePosition = positionInFather.copy();
+         absolutePosition.set(positionInFather);
     }else{
-         absolutePosition = PVector.add(positionInFather, fatherPosition).sub(new PVector(fatherRadius, fatherRadius));
+         absolutePosition.set(PVector.add(positionInFather, fatherPosition).sub(new PVector(fatherRadius, fatherRadius)));
     }
-    
-    println("ciao3");
-    
     
     for(Ball ball : children){
       ball.update();
@@ -108,6 +110,11 @@ class Ball{
       stroke(color(rgb[0], rgb[1], rgb[2]));
       fill(255, 0);
       ellipse(absolutePosition.x, absolutePosition.y, radius*2, radius*2);
+  }
+  
+  void run(){
+    update();
+    display();
   }
   
 }
