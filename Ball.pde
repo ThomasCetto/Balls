@@ -3,6 +3,9 @@
   This means that each ball velocity is influenced only by his "brothers", when they crash into each other, and not by the movement of the father by inertia.
 */
 
+
+int currentBallID = 0;
+  
 class Ball{
   // actual ball things
   PVector absolutePosition;
@@ -12,7 +15,8 @@ class Ball{
   int[] rgb;
   final float STROKE_WEIGHT;
   boolean valid = true;
-  
+  int ID;
+  final float COLLISION_TOLERANCE;
  
   // children things
   int depth;
@@ -23,9 +27,9 @@ class Ball{
   PVector fatherPosition;
   Float fatherRadius;
  
-  static final float SPEED = 1;
-  static final int N_GENERATIONS = 5;
-  static final float CHILD_RADIUS_DIVISOR = 3; // >= 2.5 please
+  static final float SPEED = 3;
+  static final int N_GENERATIONS = 3;
+  static final float CHILD_RADIUS_DIVISOR = 4; // >= 2.5 please
   
  
   Ball(float radius, final int N_CHILDREN, int[] rgb, final float STROKE_WEIGHT, int depth, PVector fatherPos, Float fatherRadius, ArrayList<Ball> brothers){
@@ -36,7 +40,11 @@ class Ball{
       this.fatherRadius = fatherRadius;
       this.brothers = brothers;
       this.STROKE_WEIGHT = STROKE_WEIGHT;
-   
+      this.ID = currentBallID;
+      this.COLLISION_TOLERANCE = radius / 40;
+      currentBallID++;
+      println("ID: ", currentBallID);
+      
       generateBall();
       this.velocity = generateBallVelocity();
       addChildren(N_CHILDREN);
@@ -69,7 +77,7 @@ class Ball{
           positionInFather = generatePositionInFather();
           
           for(Ball brother : brothers){
-              boolean collides = PVector.dist(positionInFather, brother.positionInFather) <= 2 * radius;
+              boolean collides = PVector.dist(positionInFather, brother.positionInFather) <= 2 * radius + COLLISION_TOLERANCE;
               
               if(collides){
                 overlapsABrother = true;
@@ -132,6 +140,8 @@ class Ball{
   PVector calculateVelocity(){
     if(!valid) return null;
     
+    //// colliding with boundaries 
+    
     if(depth == 0){ // rectangular boundaries
       if(positionInFather.x - radius <= 0  || positionInFather.x + radius >= width){
          velocity.x *= -1;
@@ -140,7 +150,7 @@ class Ball{
          velocity.y *= -1;
       }
     }else{ // round boundaries
-      boolean collidesWithTheFather = PVector.dist(positionInFather, new PVector(fatherRadius, fatherRadius)) >= fatherRadius - radius;
+      boolean collidesWithTheFather = PVector.dist(positionInFather, new PVector(fatherRadius, fatherRadius)) >= fatherRadius - radius - COLLISION_TOLERANCE;
        if (collidesWithTheFather) {
           PVector ballToFather = PVector.sub(positionInFather, new PVector(fatherRadius, fatherRadius));
           ballToFather.normalize();
@@ -148,6 +158,20 @@ class Ball{
           velocity.set(reflection);
         }
     }
+    
+    
+    //// colliding with brothers
+    for(Ball brother : brothers){
+      // if it's not itself
+      if(ID != brother.ID){
+        if (collided(positionInFather, brother.positionInFather)) {
+          collide(brother);
+        }
+      }
+      
+    }
+    
+    
     return velocity;
   }
  
@@ -161,6 +185,79 @@ class Ball{
       return depth == 0 ? positionInFather :
           PVector.add(positionInFather, fatherPosition).sub(new PVector(fatherRadius, fatherRadius));
   }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  void collide(Ball brother) {
+    // Calculate relative velocity
+    PVector relativeVelocity = PVector.sub(brother.velocity, velocity);
+    
+    // Calculate collision normal
+    PVector collisionNormal = PVector.sub(positionInFather, brother.positionInFather);
+    collisionNormal.normalize();
+    
+    // Calculate dot product of relative velocity and collision normal
+    float dotProduct = PVector.dot(relativeVelocity, collisionNormal);
+    
+    // Calculate new velocities
+    PVector newVel1 = PVector.add(velocity, PVector.mult(collisionNormal, dotProduct));
+    PVector newVel2 = PVector.sub(brother.velocity, PVector.mult(collisionNormal, dotProduct));
+    
+    // Update velocities and cap magnitude
+    velocity = newVel1.limit(SPEED);
+    brother.velocity = newVel2.limit(SPEED);
+  }
+  
+  boolean collided(PVector pos1, PVector pos2) {
+    float distance = dist(pos1.x, pos1.y, pos2.x, pos2.y);
+    float collisionDistance = radius * 2 + COLLISION_TOLERANCE; // Add tolerance to collision distance
+    return distance < collisionDistance; // Assuming the radius is the same for all circles
+  }
+    
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
  
    void display(){
       stroke(color(rgb[0], rgb[1], rgb[2]));
