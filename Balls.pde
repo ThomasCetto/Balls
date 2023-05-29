@@ -1,20 +1,32 @@
 ArrayList<Ball> balls = new ArrayList<>();
+final int N_BALLS = 1;
+final float R = 300;
+final int N_CHILDREN = 100;
+final float STROKE_WEIGHT = 3;
 
 void setup() {
   size(1500, 800);
- 
-  int N_BALLS = 1;
- 
-  for(int i=0; i<N_BALLS; i++){
-      Ball ball = new Ball(400, 1, new int[]{(int)random(0, 255), (int)random(0, 255), (int)random(0, 255)}, 0, null, null, null);
-      balls.add(ball);
-  }
- 
+   
+   generateBalls();
 }
 
 void draw(){
   background(0);
   for(Ball ball: balls){
    ball.run();
+  }
+}
+
+void keyPressed() {
+  if (keyCode == 82) { // R key
+    balls.clear();
+    generateBalls();
+  }
+}
+
+void generateBalls(){
+  for(int i=0; i<N_BALLS; i++){
+      Ball ball = new Ball(R, N_CHILDREN, new int[]{(int)random(0, 255), (int)random(0, 255), (int)random(0, 255)}, STROKE_WEIGHT, 0, null, null, null);
+      balls.add(ball);
   }
 }

@@ -10,9 +10,11 @@ class Ball{
   PVector velocity;
   float radius;
   int[] rgb;
+  final float STROKE_WEIGHT;
+  boolean valid = true;
+  
  
   // children things
-  int nChildren;
   int depth;
   ArrayList<Ball> children = new ArrayList<>();
   ArrayList<Ball> brothers = new ArrayList<>();
@@ -22,21 +24,22 @@ class Ball{
   Float fatherRadius;
  
   static final float SPEED = 1;
-  static final int N_GENERATIONS = 7;
-  static final float CHILD_RADIUS_DIVISOR = 2.5; // > 2 please
+  static final int N_GENERATIONS = 5;
+  static final float CHILD_RADIUS_DIVISOR = 3; // >= 2.5 please
+  
  
-  Ball(float radius, int nChildren, int[] rgb, int depth, PVector fatherPos, Float fatherRadius, ArrayList<Ball> brothers){
+  Ball(float radius, final int N_CHILDREN, int[] rgb, final float STROKE_WEIGHT, int depth, PVector fatherPos, Float fatherRadius, ArrayList<Ball> brothers){
       this.radius = radius;
       this.rgb = rgb;
-      this.nChildren = nChildren;
       this.depth = depth;  
       this.fatherPosition = fatherPos;
       this.fatherRadius = fatherRadius;
       this.brothers = brothers;
+      this.STROKE_WEIGHT = STROKE_WEIGHT;
    
-      this.velocity = generateBallVelocity();
       generateBall();
-      addChildren();
+      this.velocity = generateBallVelocity();
+      addChildren(N_CHILDREN);
   }
  
   void update(){
@@ -48,45 +51,75 @@ class Ball{
   }
  
   void generateBall(){
+    final int MAX_TRIES_OF_PLACING = 20;
+    
     if(absolutePosition == null){
        absolutePosition = new PVector(0, 0);
     }
     if(depth == 0){
+        // spaws inside the rectangle
         positionInFather = new PVector(random(radius + 3, width - radius - 3), random(radius + 3, height - radius - 3));
         absolutePosition.set(positionInFather);
       }else{
-        positionInFather = new PVector(random(2*radius, 2*fatherRadius - 2*radius), random(2*radius, 2*fatherRadius - 2*radius)); //inside his father
-        absolutePosition.set(PVector.add(positionInFather, fatherPosition));
+        // tries to not collide with the others inside the same ball
+        int tries = 0;
+        boolean overlapsABrother;
+        do{
+          overlapsABrother = false;
+          positionInFather = generatePositionInFather();
+          
+          for(Ball brother : brothers){
+              boolean collides = PVector.dist(positionInFather, brother.positionInFather) <= 2 * radius;
+              
+              if(collides){
+                overlapsABrother = true;
+                break;
+              }
+          }
+          tries++;
+          
+        }while(overlapsABrother && tries < MAX_TRIES_OF_PLACING);
+        
+        valid = !overlapsABrother;
+        PVector newAbsPos = valid ? PVector.add(positionInFather, fatherPosition) : new PVector(-100000, -100000);
+        absolutePosition.set(newAbsPos);
       }
+  }
+  
+  PVector generatePositionInFather() {
+    float radians = random(TWO_PI);
+    float deviation = (fatherRadius - radius) * sqrt(random(1));
+    float cx = fatherRadius + deviation * cos(radians);
+    float cy = fatherRadius + deviation * sin(radians);
+    return new PVector(cx, cy);
+    
   }
  
   PVector generateBallVelocity(){
       // x + y velocities = Ball.SPEED -> so it's always the same speed
       float vx = (depth == 0) ? random(0.25*Ball.SPEED, 0.75*Ball.SPEED) : random(0, Ball.SPEED);
-      if(random(0, 1) > 0.5) // 50% prob
-        vx *= -1;
-        
-      
       float vy = Ball.SPEED - vx;
       
-      if(depth == 0){
-         vx = 0; //canc
-          vy = 0; 
-      }
+      if(random(0, 1) > 0.5) // 50% prob
+        vx *= -1;
+      if(random(0, 1) > 0.5) // 50% prob
+        vy *= -1;
         
-      
       return new PVector(vx, vy);
   }
  
-  void addChildren(){
+  void addChildren(final int N_CHILDREN){
+      if(!valid) return;
+    
       float childRadius = radius / CHILD_RADIUS_DIVISOR;
-      if(depth < Ball.N_GENERATIONS - 1){
-        for(int i=0; i<nChildren; i++){
+      if(depth < Ball.N_GENERATIONS - 1){ // if it can have babies
+        for(int i=0; i<N_CHILDREN; i++){
             children.add(
               new Ball(
                 childRadius,
-                nChildren,
+                N_CHILDREN,
                 rgb,
+                STROKE_WEIGHT / 1.5,
                 depth + 1,
                 absolutePosition,
                 radius,
@@ -97,6 +130,8 @@ class Ball{
   }
  
   PVector calculateVelocity(){
+    if(!valid) return null;
+    
     if(depth == 0){ // rectangular boundaries
       if(positionInFather.x - radius <= 0  || positionInFather.x + radius >= width){
          velocity.x *= -1;
@@ -105,7 +140,8 @@ class Ball{
          velocity.y *= -1;
       }
     }else{ // round boundaries
-       if (PVector.dist(positionInFather, new PVector(fatherRadius, fatherRadius)) >= fatherRadius - radius) { // if hits the rim or goes out
+      boolean collidesWithTheFather = PVector.dist(positionInFather, new PVector(fatherRadius, fatherRadius)) >= fatherRadius - radius;
+       if (collidesWithTheFather) {
           PVector ballToFather = PVector.sub(positionInFather, new PVector(fatherRadius, fatherRadius));
           ballToFather.normalize();
           PVector reflection = PVector.sub(velocity, PVector.mult(ballToFather, 2 * PVector.dot(velocity, ballToFather)));
@@ -117,27 +153,25 @@ class Ball{
  
   void updateChildren(){
     for(Ball ball : children){
-        ball.update();
-        ball.display();
+        ball.run();
     }
   }
  
   PVector getAbsolutePosition(){
-      if(depth == 0){
-         return positionInFather;
-      }else{
-           return PVector.add(positionInFather, fatherPosition).sub(new PVector(fatherRadius, fatherRadius));
-      }
+      return depth == 0 ? positionInFather :
+          PVector.add(positionInFather, fatherPosition).sub(new PVector(fatherRadius, fatherRadius));
   }
  
    void display(){
       stroke(color(rgb[0], rgb[1], rgb[2]));
-      strokeWeight(1);
+      strokeWeight(STROKE_WEIGHT);
       fill(255, 0);
       ellipse(absolutePosition.x, absolutePosition.y, radius*2, radius*2);
   }
  
   void run(){
+    if(!valid) return;
+    
     update();
     display();
   }
