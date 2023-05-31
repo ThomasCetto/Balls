@@ -3,7 +3,6 @@
   This means that each ball velocity is influenced only by his "brothers", when they crash into each other, and not by the movement of the father by inertia.
 */
 
-
 int currentBallID = 0;
   
 class Ball{
@@ -28,7 +27,7 @@ class Ball{
   Float fatherRadius;
  
   static final float SPEED = 3;
-  static final int N_GENERATIONS = 3;
+  static final int N_GENERATIONS = 4;
   static final float CHILD_RADIUS_DIVISOR = 4; // >= 2.5 please
   
  
@@ -159,19 +158,15 @@ class Ball{
         }
     }
     
-    
     //// colliding with brothers
     for(Ball brother : brothers){
       // if it's not itself
       if(ID != brother.ID){
-        if (collided(positionInFather, brother.positionInFather)) {
+        if (collided(brother.positionInFather)) {
           collide(brother);
         }
       }
-      
     }
-    
-    
     return velocity;
   }
  
@@ -185,26 +180,6 @@ class Ball{
       return depth == 0 ? positionInFather :
           PVector.add(positionInFather, fatherPosition).sub(new PVector(fatherRadius, fatherRadius));
   }
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   
   void collide(Ball brother) {
     // Calculate relative velocity
@@ -226,39 +201,12 @@ class Ball{
     brother.velocity = newVel2.limit(SPEED);
   }
   
-  boolean collided(PVector pos1, PVector pos2) {
-    float distance = dist(pos1.x, pos1.y, pos2.x, pos2.y);
-    float collisionDistance = radius * 2 + COLLISION_TOLERANCE; // Add tolerance to collision distance
-    return distance < collisionDistance; // Assuming the radius is the same for all circles
+  boolean collided(PVector brother) {
+    float distance = dist(positionInFather.x, positionInFather.y, brother.x, brother.y);
+    float collisionDistance = radius * 2 + COLLISION_TOLERANCE;
+    return distance < collisionDistance;
   }
     
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
- 
    void display(){
       stroke(color(rgb[0], rgb[1], rgb[2]));
       strokeWeight(STROKE_WEIGHT);

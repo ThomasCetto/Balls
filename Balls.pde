@@ -3,7 +3,7 @@
 ArrayList<Ball> balls = new ArrayList<>();
 final int N_BALLS = 1;
 final float R = 300;
-final int N_CHILDREN = 4;
+final int N_CHILDREN = 2;
 final float STROKE_WEIGHT = 3;
 
 
